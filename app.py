@@ -119,7 +119,12 @@ def create_figures():
 token_bar, token_line, wallet_pie, wallet_bar, referral_bar, referral_line, fee_line = create_figures()
 
 # --- Dash App ---
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = Dash(
+    __name__,
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}]
+)
+
 app.title = 'Sharp Token Dashboard'
 
 app.layout = dbc.Container([
