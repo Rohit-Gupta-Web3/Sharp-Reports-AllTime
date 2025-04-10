@@ -16,7 +16,7 @@ for df_ in [token_df, wallet_df, referral_df, fee_df]:
         df_['Date'] = pd.to_datetime(df_['Date'], errors='coerce')
         df_.dropna(subset=['Date'], inplace=True)
 
-referral_sources = referral_df.columns.difference(['Date'])
+referral_sources = [col for col in referral_df.columns if col != 'Date' and pd.api.types.is_numeric_dtype(referral_df[col])]
 referral_df['Referrals'] = referral_df[referral_sources].sum(axis=1)
 
 # --- Precompute Figures ---
