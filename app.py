@@ -11,10 +11,10 @@ wallet_df = df['Wallets Created']
 fee_df = df['POL Data']
 
 # --- Clean and prep data ---for df_ in [token_df, wallet_df, referral_df, fee_df]:
-if 'Date' in df_.columns:
-    df_['Date'] = pd.to_datetime(df_['Date'], errors='coerce')
-    df_.dropna(subset=['Date'], inplace=True)
-
+for df_ in [token_df, wallet_df, referral_df, fee_df]:
+    if 'Date' in df_.columns:
+        df_['Date'] = pd.to_datetime(df_['Date'], errors='coerce')
+        df_.dropna(subset=['Date'], inplace=True)
 
 referral_sources = referral_df.columns.difference(['Date'])
 referral_df['Referrals'] = referral_df[referral_sources].sum(axis=1)
