@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import plotly.express as px
 from dash import Dash, dcc, html
@@ -147,74 +148,44 @@ def create_figures():
 
         # -------- TOKENS PER SOURCE --------
     tokens_source_df['Date'] = pd.to_datetime(tokens_source_df['Date'], errors='coerce').dt.date
-    #tsdf = tokens_source_df[tokens_source_df['Date'] >= '2025-01-01'].copy()
     tsdf = tokens_source_df.copy()
     
     # 1. Total Token by Source - Bar Chart
     total_tokens = df[token_source_cols].sum().reset_index()
     total_tokens.columns = ['Source', 'Total Tokens']
+
+    grand_total = total_tokens['Total Tokens'].sum()
+    
     token_source_bar = px.bar(
         total_tokens,
-        x='Source',
-        y='Total Tokens',
-        color='Source',  # color by source to get different colors
-        title='Total Tokens by Source',
-        color_discrete_sequence=px.colors.qualitative.Set3  # or try Plotly, Pastel, Bold etc.
+        x='Total Tokens',
+        y='Source',
+        orientation='h',
+        color='Source',
+        title=f'Total Tokens by Source (Total: {int(total_tokens['Total Tokens'].sum()):,})',
+        color_discrete_sequence=px.colors.qualitative.Set3,
+        text=None
     )
     
-    # 2. Stacked Bar Chart - Tokens per Source Over Time
-    # Prepare Monthly Tokens by Source
-    df_stacked = df.copy()
-    df_stacked['Month'] = df_stacked['Date'].astype(str).str[:7]  # e.g., '2025-04'
+    token_source_bar.update_traces(
+        text=total_tokens['Total Tokens'],
+        texttemplate='%{text:,.0f}',
+        insidetextanchor='middle'
+    )
     
-    # Group by Month and Sum Tokens per Source
-    monthly_source_sum = df_stacked.groupby('Month')[token_source_cols].sum().reset_index()
-    
-    # Define rows and columns
-    months = pd.to_datetime(monthly_source_sum['Month'], format="%Y-%m").dt.strftime('%b %Y')
-    cols = 3
-    rows = (len(months) + cols - 1) // cols
-    
-    # Create subplot grid for pies
-    token_source_pie_grid = make_subplots(
-        rows=rows,
-        cols=cols,
-        specs=[[{'type': 'domain'}]*cols]*rows,
-        subplot_titles=[''] * len(months)  # Hide subplot titles
+    token_source_bar.update_layout(
+        showlegend = False,
+        uniformtext_minsize=8,
+        uniformtext_mode='hide',
+        bargap=0.15,
+        bargroupgap=0.1
     )
 
-    # Add each pie chart to the grid
-    for i, row in monthly_source_sum.iterrows():
-        r, c = divmod(i, cols)
-        token_source_pie_grid.add_trace(
-            go.Pie(
-                labels=token_source_cols,
-                values=row[token_source_cols],
-                name='',
-                marker=dict(colors=px.colors.qualitative.Safe),
-                showlegend=(i == 0)  # Only show legend once
-            ),
-            row=r+1, col=c+1
-        )
-    
-    # Update layout
-    token_source_pie_grid.update_layout(
-        title='Monthly Token Distribution by Source',
-        showlegend=True,
-        legend=dict(
-            orientation='h',
-            x=0.5,
-            xanchor='center',
-            y=-0.1
-        )
-    )
-
-    return token_bar, token_line, wallet_pie, wallet_bar, referral_bar, referral_line, fee_line, \
-       token_source_bar, token_source_pie_grid
+    return token_bar, token_line, wallet_pie, wallet_bar, referral_bar, referral_line, fee_line, token_source_bar
 
 # --- Generate charts once ---
 token_bar, token_line, wallet_pie, wallet_bar, referral_bar, referral_line, fee_line, \
-        token_source_bar, token_source_pie_grid = create_figures()
+        token_source_bar= create_figures()
 
 # --- Dash App ---
 app = Dash(
@@ -248,18 +219,10 @@ app.layout = dbc.Container([
 
     # Fees
     dbc.Row([
-        dbc.Col(dcc.Graph(figure=fee_line), md=12),
+        dbc.Col(dcc.Graph(figure=fee_line), md=6),
+        dbc.Col(dcc.Graph(figure=token_source_bar), md=6),
     ], className="mb-4"),
-
-    # Tokens per Source
-    dbc.Row([
-        dbc.Col(dcc.Graph(figure=token_source_bar), md=6),        
-        dbc.Col(dcc.Graph(figure=token_source_pie_grid), md=6),
-    ], className="mb-4"),
-    
 ], fluid=True)
-
-import os
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 80))
