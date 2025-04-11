@@ -40,6 +40,7 @@ def create_figures():
     monthly_tokens = token_df.resample('ME', on='Date').sum().reset_index()
     monthly_tokens['Month'] = monthly_tokens['Date'].dt.strftime('%B %Y')
     total_tokens = token_df['Amount'].sum()
+    token_source_cols = tokens_source_df.select_dtypes(include='number').columns.tolist()
 
     token_bar = px.bar(
         monthly_tokens,
@@ -162,14 +163,14 @@ def create_figures():
         y='Source',
         orientation='h',
         color='Source',
-        title=f'Total Tokens by Source (Total: {int(total_tokens["Total Tokens"].sum()):,})',
+        title=f'Total Tokens by Source (Total: {int(total_tokens['Total Tokens'].sum()):,})',
         color_discrete_sequence=px.colors.qualitative.Set3,
         text=None
     )
     
     token_source_bar.update_traces(
         text=total_tokens['Total Tokens'],
-        texttemplate='%{text:,.0f}',
+        texttemplate='%{x:,.0f}',
         insidetextanchor='middle'
     )
     
@@ -181,11 +182,84 @@ def create_figures():
         bargroupgap=0.1
     )
 
-    return token_bar, token_line, wallet_pie, wallet_bar, referral_bar, referral_line, fee_line, token_source_bar
+    # --- Monthly Tokens by Source (Pie Subplots) ---
+    tsdf = tokens_source_df.copy()
+    tsdf['Date'] = pd.to_datetime(tsdf['Date'], errors='coerce')
+    tsdf = tsdf[tsdf['Date'] >= '2025-01-01'].dropna(subset=['Date'])
+    
+    tsdf['Month_dt'] = tsdf['Date'].dt.to_period('M').dt.to_timestamp()
+    tsdf['Month'] = tsdf['Month_dt'].dt.strftime('%b %y')
+    tsdf = tsdf.sort_values('Month_dt')
+    
+    # Ensure consistent month order
+    month_order = tsdf['Month'].unique().tolist()
+    tsdf['Month'] = pd.Categorical(tsdf['Month'], categories=month_order, ordered=True)
+    
+    # Ensure token_source_cols is defined properly
+    token_source_cols = [col for col in tsdf.columns if col not in ['Date', 'Month_dt', 'Month'] and pd.api.types.is_numeric_dtype(tsdf[col])]
+    
+    # Melt and group data
+    melted = tsdf.melt(id_vars='Month', value_vars=token_source_cols, var_name='Source', value_name='Tokens')
+    monthly_data = melted.groupby(['Month', 'Source'], observed=True).sum().reset_index()
+    
+    # Get ordered months and totals
+    months = monthly_data['Month'].cat.categories.tolist()
+    month_totals = monthly_data.groupby('Month', observed=True)['Tokens'].sum().to_dict()
+    
+    # Create subplot titles with line break
+    subplot_titles = [f"{m}<br>Total: {int(month_totals[m]):,}" for m in months]
+    
+    # Create subplot titles (month only)
+    subplot_titles = [f"{m}" for m in months]
+    
+    # Create subplot layout
+    fig_pies = make_subplots(
+        rows=1,
+        cols=len(months),
+        specs=[[{'type': 'domain'}]*len(months)],
+        subplot_titles=subplot_titles
+    )
+    
+    # Add pies and "Total" annotations
+    annotations = []
+    for i, month in enumerate(months):
+        sub_df = monthly_data[monthly_data['Month'] == month]
+        fig_pies.add_trace(
+            go.Pie(
+                labels=sub_df['Source'],
+                values=sub_df['Tokens'],
+                name=str(month),
+                textinfo='percent',
+                text=sub_df['Source'],
+                textposition='inside',
+                hovertemplate='%{label}: %{value:,.0f} tokens (%{percent})<extra></extra>'
+            ),
+            row=1,
+            col=i+1
+        )
+    
+        # Add small total token annotation under the title
+        annotations.append(dict(
+            x=(i + 0.5) / len(months),
+            y=0.05,  # Adjust vertical position below chart
+            text=f"<span style='font-size:12px'>Total: {int(sub_df['Tokens'].sum()):,}</span>",
+            showarrow=False,
+            xanchor='center',
+            font=dict(size=12),
+            xref='paper',
+            yref='paper'
+        ))
+    
+    fig_pies.update_layout(
+        title_text=f"Monthly Token Distribution by Source (Total: {int(monthly_data['Tokens'].sum()):,})",
+        margin=dict(t=100, b=80),
+        annotations=fig_pies.layout.annotations + tuple(annotations)
+    )
+    return token_bar, token_line, wallet_pie, wallet_bar, referral_bar, referral_line, fee_line, token_source_bar, fig_pies
 
 # --- Generate charts once ---
 token_bar, token_line, wallet_pie, wallet_bar, referral_bar, referral_line, fee_line, \
-        token_source_bar= create_figures()
+        token_source_bar, fig_pies = create_figures()
 
 # --- Dash App ---
 app = Dash(
@@ -222,6 +296,11 @@ app.layout = dbc.Container([
         dbc.Col(dcc.Graph(figure=fee_line), md=6),
         dbc.Col(dcc.Graph(figure=token_source_bar), md=6),
     ], className="mb-4"),
+    
+    dbc.Row([
+        dbc.Col(dcc.Graph(figure=fig_pies), md=12),
+    ], className="mb-4"),
+    
 ], fluid=True)
 
 if __name__ == '__main__':
