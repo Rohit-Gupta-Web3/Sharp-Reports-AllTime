@@ -163,7 +163,7 @@ def create_figures():
         y='Source',
         orientation='h',
         color='Source',
-        title=f'Total Tokens by Source (Total: {int(total_tokens['Total Tokens'].sum()):,})',
+        title=f'Total Tokens by Source (Total: {int(total_tokens["Total Tokens"].sum()):,})',
         color_discrete_sequence=px.colors.qualitative.Set3,
         text=None
     )
