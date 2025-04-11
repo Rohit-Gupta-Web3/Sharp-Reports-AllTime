@@ -240,8 +240,8 @@ def create_figures():
     
         # Add small total token annotation under the title
         annotations.append(dict(
-            x=(i + 0.5) / len(months),
-            y=0.05,  # Adjust vertical position below chart
+            x=(i + 0.5) / len(months),   # center under each pie chart
+            y=-0.25,                     # push it well below the chart
             text=f"<span style='font-size:12px'>Total: {int(sub_df['Tokens'].sum()):,}</span>",
             showarrow=False,
             xanchor='center',
