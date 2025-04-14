@@ -43,11 +43,17 @@ token_source_cols = tokens_source_df.select_dtypes(include='number').columns.tol
 # --- Precompute Figures ---
 def create_figures():
     # Token Charts
-    monthly_tokens = tokens_source_df.resample('ME', on='Date')[token_source_cols].sum()
-    monthly_tokens['Amount'] = monthly_tokens.sum(axis=1)  # total across all sources
-    monthly_tokens = monthly_tokens.reset_index()
+    token_source_cols = tokens_source_df.select_dtypes(include='number').columns.tolist()
+    token_source_cols = [col for col in token_source_cols if col != 'Total']  # exclude 'Total' if it exists
+
+    monthly_tokens = tokens_source_df.resample('ME', on='Date').sum(numeric_only=True).reset_index()
     monthly_tokens['Month'] = monthly_tokens['Date'].dt.strftime('%B %Y')
-    total_tokens = monthly_tokens['Amount'].sum()
+
+# Use precomputed Total column from Excel
+    if 'Total' not in monthly_tokens.columns:
+        monthly_tokens['Total'] = monthly_tokens[token_source_cols].sum(axis=1)
+
+    total_tokens = monthly_tokens['Total'].sum()
 
     token_bar = px.bar(
         monthly_tokens,
