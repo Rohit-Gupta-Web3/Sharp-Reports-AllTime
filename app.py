@@ -24,8 +24,8 @@ df = tokens_source_df.copy()
 # Identify numeric source columns
 token_source_cols = df.select_dtypes(include='number').columns.tolist()
 
-# --- Clean and prep data ---for df_ in [token_df, wallet_df, referral_df, fee_df]:
-for df_ in [token_df, wallet_df, referral_df, fee_df]:
+# --- Clean and prep data ---for df_ in [wallet_df, referral_df, fee_df]:
+for df_ in [wallet_df, referral_df, fee_df]:
     if 'Date' in df_.columns:
         df_['Date'] = pd.to_datetime(df_['Date'], format='%Y-%m-%d', errors='coerce')
         df_.dropna(subset=['Date'], inplace=True)
