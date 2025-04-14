@@ -43,16 +43,22 @@ token_source_cols = tokens_source_df.select_dtypes(include='number').columns.tol
 # --- Precompute Figures ---
 def create_figures():
     # Token Charts
-    token_source_cols = tokens_source_df.select_dtypes(include='number').columns.tolist()
-    token_source_cols = [col for col in token_source_cols if col != 'Total']  # exclude 'Total' if it exists
-
-    monthly_tokens = tokens_source_df.resample('ME', on='Date').sum(numeric_only=True).reset_index()
+    # 1. Filter from Jan 1, 2025 onwards
+    tsdf = tokens_source_df[tokens_source_df['Date'] >= '2025-01-01'].copy()
+    
+    # 2. Get list of source columns (excluding 'Total' if present)
+    token_source_cols = tsdf.select_dtypes(include='number').columns.tolist()
+    token_source_cols = [col for col in token_source_cols if col != 'Total']
+    
+    # 3. Resample monthly
+    monthly_tokens = tsdf.resample('ME', on='Date').sum(numeric_only=True).reset_index()
     monthly_tokens['Month'] = monthly_tokens['Date'].dt.strftime('%B %Y')
-
-# Use precomputed Total column from Excel
+    
+    # 4. Use existing Total column, or calculate fallback
     if 'Total' not in monthly_tokens.columns:
         monthly_tokens['Total'] = monthly_tokens[token_source_cols].sum(axis=1)
-
+    
+    # 5. Get grand total
     total_tokens = monthly_tokens['Total'].sum()
 
     token_bar = px.bar(
@@ -68,6 +74,24 @@ def create_figures():
         x='Date',
         y='Total',
         title=f'Monthly Token Growth Over Time (Total: {total_tokens:,.0f})'
+    )
+    
+    # Explicitly setting legend group and name for clarity
+    token_line.update_traces(
+        name="Total Tokens",
+        legendgroup="Total Tokens"
+    )
+    
+    # You can also ensure that the legend shows the correct label
+    token_line.update_layout(
+        showlegend=True,
+        legend=dict(
+            title="Legend",
+            x=0.8,
+            y=1,
+            traceorder="normal",
+            orientation="v"
+        )
     )
 
     # Wallet Charts
@@ -201,7 +225,7 @@ def create_figures():
     tsdf = tsdf[tsdf['Date'] >= '2025-01-01'].dropna(subset=['Date'])
     
     tsdf['Month_dt'] = tsdf['Date'].dt.to_period('M').dt.to_timestamp()
-    tsdf['Month'] = tsdf['Month_dt'].dt.strftime('%b %y')
+    tsdf['Month'] = tsdf['Month_dt'].dt.strftime('%b %Y')
     tsdf = tsdf.sort_values('Month_dt')
     
     # Ensure consistent month order
