@@ -9,7 +9,6 @@ from plotly.subplots import make_subplots
 # --- Load data ---
 df = {k.strip(): v for k, v in pd.read_excel('Sharp Token.xlsx', sheet_name=None).items()}
 referral_df = df['Referrals']
-token_df = df['Tokens distributed per day']
 wallet_df = df['Wallets Created']
 fee_df = df['POL Data']
 
@@ -37,15 +36,16 @@ referral_df['Referrals'] = referral_df[referral_sources].sum(axis=1)
 # --- Precompute Figures ---
 def create_figures():
     # Token Charts
-    monthly_tokens = token_df.resample('ME', on='Date').sum().reset_index()
+    monthly_tokens = tokens_source_df.resample('ME', on='Date')[token_source_cols].sum().reset_index()
     monthly_tokens['Month'] = monthly_tokens['Date'].dt.strftime('%B %Y')
-    total_tokens = token_df['Amount'].sum()
+    monthly_tokens['Total'] = monthly_tokens[token_source_cols].sum(axis=1)
+    total_tokens = monthly_tokens['Total'].sum()
     token_source_cols = tokens_source_df.select_dtypes(include='number').columns.tolist()
 
     token_bar = px.bar(
         monthly_tokens,
         x='Month',
-        y='Amount',
+        y='Total',
         title=f'Monthly Token Distribution (Total: {total_tokens:,.0f})'
     )
     token_bar.update_layout(xaxis_tickangle=-45)
@@ -53,7 +53,7 @@ def create_figures():
     token_line = px.line(
         monthly_tokens,
         x='Date',
-        y='Amount',
+        y='Total',
         title=f'Monthly Token Growth Over Time (Total: {total_tokens:,.0f})'
     )
 
