@@ -33,14 +33,21 @@ for df_ in [wallet_df, referral_df, fee_df]:
 referral_sources = [col for col in referral_df.columns if col != 'Date' and pd.api.types.is_numeric_dtype(referral_df[col])]
 referral_df['Referrals'] = referral_df[referral_sources].sum(axis=1)
 
+tokens_source_df = pd.read_excel("Sharp Token.xlsx", sheet_name="Tokens per source")
+tokens_source_df['Date'] = pd.to_datetime(tokens_source_df['Date'], format='%m-%d-%Y', errors='coerce')
+tokens_source_df.dropna(subset=['Date'], inplace=True)
+
+# Identify token source columns here (do it early)
+token_source_cols = tokens_source_df.select_dtypes(include='number').columns.tolist()
+
 # --- Precompute Figures ---
 def create_figures():
     # Token Charts
-    monthly_tokens = tokens_source_df.resample('ME', on='Date')[token_source_cols].sum().reset_index()
+    monthly_tokens = tokens_source_df.resample('ME', on='Date')[token_source_cols].sum()
+    monthly_tokens['Amount'] = monthly_tokens.sum(axis=1)  # total across all sources
+    monthly_tokens = monthly_tokens.reset_index()
     monthly_tokens['Month'] = monthly_tokens['Date'].dt.strftime('%B %Y')
-    monthly_tokens['Total'] = monthly_tokens[token_source_cols].sum(axis=1)
-    total_tokens = monthly_tokens['Total'].sum()
-    token_source_cols = tokens_source_df.select_dtypes(include='number').columns.tolist()
+    total_tokens = monthly_tokens['Amount'].sum()
 
     token_bar = px.bar(
         monthly_tokens,
