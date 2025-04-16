@@ -238,7 +238,7 @@ def create_figures():
         annotations.append(
             dict(
                 x=(i + 0.5) / len(months),
-                y=0.05,
+                y=-0.25,
                 text=f"<b style='font-size:12px'>Total: {int(sub_df['Tokens'].sum()):,}</b>",
                 showarrow=False,
                 xanchor="center",
