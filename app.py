@@ -204,9 +204,8 @@ def create_figures():
     month_order = tsdf["Month"].unique().tolist()
     tsdf["Month"] = pd.Categorical(tsdf["Month"], categories=month_order, ordered=True)
 
-    token_source_cols = [ col for col in tsdf.columns if col not in ["Date", "Month_dt", "Month"] and pd.api.types.is_numeric_dtype(tsdf[col]) ]
-    melted = tsdf.melt( id_vars="Month", value_vars=token_source_cols, var_name="Source", value_name="Tokens",
-    )
+    token_source_cols = [ col for col in tsdf.columns if col not in ["Date", "Month_dt", "Month", "Total"] and pd.api.types.is_numeric_dtype(tsdf[col]) ]
+    melted = tsdf.melt( id_vars="Month", value_vars=token_source_cols, var_name="Source", value_name="Tokens",)
     monthly_data = (melted.groupby(["Month", "Source"], observed=True).sum().reset_index())
     months = monthly_data["Month"].cat.categories.tolist()
     month_totals = (monthly_data.groupby("Month", observed=True)["Tokens"].sum().to_dict())
@@ -229,7 +228,7 @@ def create_figures():
                 textinfo="percent",
                 text=sub_df["Source"],
                 textposition="inside",
-                hovertemplate="%{label}: %{value:,.0f} tokens (%{percent})<extra></extra>",
+                hovertemplate="%{label}: %{value:,.0f} tokens (%{percent})",
                 marker=dict(colors=px.colors.qualitative.Pastel),
             ),
             row=1,
@@ -298,9 +297,10 @@ app.layout = dbc.Container(
         ),
         dbc.Row([dbc.Col(dcc.Graph(figure=fig_pies), md=12)], className="mb-4"),
     ],
-    fluid=True,
+    fluid=False,
 )
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 80))
     app.run(host='0.0.0.0')
+    #app.run(debug=True)
