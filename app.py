@@ -104,27 +104,57 @@ def create_figures():
 
     melted = tsdf.melt(id_vars="Month", value_vars=token_source_cols, var_name="Source", value_name="Tokens")
     monthly_data = melted.groupby(["Month", "Source"], observed=True).sum().reset_index()
+    
     months = monthly_data["Month"].cat.categories.tolist()
-    n_cols = 4
+    n_cols = 6  # max 6 pies per row
     n_rows = (len(months) + n_cols - 1) // n_cols
     subplot_titles = [f"{m}" for m in months]
 
-    fig_pies = make_subplots(rows=n_rows, cols=n_cols, specs=[[{"type": "domain"}] * n_cols for _ in range(n_rows)], subplot_titles=subplot_titles)
+    fig_pies = make_subplots(
+        rows=n_rows,
+        cols=n_cols,
+        specs=[[{"type": "domain"}] * n_cols for _ in range(n_rows)],
+        subplot_titles=subplot_titles,
+    )
     annotations = []
     for idx, month in enumerate(months):
         row = idx // n_cols + 1
         col = idx % n_cols + 1
         sub_df = monthly_data[monthly_data["Month"] == month]
-        fig_pies.add_trace(go.Pie(labels=sub_df["Source"], values=sub_df["Tokens"], name=str(month), textinfo="percent",
-            text=sub_df["Source"], textposition="inside", hovertemplate="%{label}: %{value:,.0f} tokens (%{percent})",
-            marker=dict(colors=px.colors.qualitative.Pastel)), row=row, col=col)
-        annotations.append(dict(x=((col - 0.5) / n_cols), y=-0.2 - (row - 1) * 0.35,
-            text=f"<b style='font-size:16px'>Total: {int(sub_df['Tokens'].sum()):,}</b>", showarrow=False,
-            xanchor="center", font=dict(size=16), xref="paper", yref="paper"))
+        fig_pies.add_trace(
+            go.Pie(
+                labels=sub_df["Source"],
+                values=sub_df["Tokens"],
+                name=str(month),
+                textinfo="percent",
+                text=sub_df["Source"],
+                textposition="inside",
+                hovertemplate="%{label}: %{value:,.0f} tokens (%{percent})",
+                marker=dict(colors=px.colors.qualitative.Pastel),
+            ),
+            row=row,
+            col=col,
+        )
+        annotations.append(
+            dict(
+                x=((col - 0.5) / n_cols),
+                y=1 - (row / (n_rows + 0.5)),
+                text=f"<b style='font-size:14px'>Total: {int(sub_df['Tokens'].sum()):,}</b>",
+                showarrow=False,
+                xanchor="center",
+                font=dict(size=14),
+                xref="paper",
+                yref="paper",
+            )
+        )
 
-    fig_pies.update_layout(title_text=f"Monthly Token Distribution by Source (Total: {int(monthly_data['Tokens'].sum()):,})",
-        margin=dict(t=100, b=100), annotations=fig_pies.layout.annotations + tuple(annotations), height=500 * n_rows)
-
+    fig_pies.update_layout(
+        title_text=f"Monthly Token Distribution by Source (Total: {int(monthly_data['Tokens'].sum()):,})",
+        margin=dict(t=80, b=60),
+        annotations=fig_pies.layout.annotations + tuple(annotations),
+        height=400 * n_rows,
+    )
+    
     return token_bar, token_line, wallet_bar, wallet_pie, referral_bar, referral_line, fee_line, token_source_bar, fig_pies
 
 # --- Generate charts once ---
