@@ -105,21 +105,25 @@ def create_figures():
     melted = tsdf.melt(id_vars="Month", value_vars=token_source_cols, var_name="Source", value_name="Tokens")
     monthly_data = melted.groupby(["Month", "Source"], observed=True).sum().reset_index()
     months = monthly_data["Month"].cat.categories.tolist()
-    month_totals = monthly_data.groupby("Month", observed=True)["Tokens"].sum().to_dict()
+    n_cols = 4
+    n_rows = (len(months) + n_cols - 1) // n_cols
     subplot_titles = [f"{m}" for m in months]
 
-    fig_pies = make_subplots(rows=1, cols=len(months), specs=[[{"type": "domain"}] * len(months)], subplot_titles=subplot_titles)
+    fig_pies = make_subplots(rows=n_rows, cols=n_cols, specs=[[{"type": "domain"}] * n_cols for _ in range(n_rows)], subplot_titles=subplot_titles)
     annotations = []
-    for i, month in enumerate(months):
+    for idx, month in enumerate(months):
+        row = idx // n_cols + 1
+        col = idx % n_cols + 1
         sub_df = monthly_data[monthly_data["Month"] == month]
         fig_pies.add_trace(go.Pie(labels=sub_df["Source"], values=sub_df["Tokens"], name=str(month), textinfo="percent",
             text=sub_df["Source"], textposition="inside", hovertemplate="%{label}: %{value:,.0f} tokens (%{percent})",
-            marker=dict(colors=px.colors.qualitative.Pastel)), row=1, col=i + 1)
-        annotations.append(dict(x=(i + 0.5) / len(months), y=-0.25, text=f"<b style='font-size:16px'>Total: {int(sub_df['Tokens'].sum()):,}</b>",
-            showarrow=False, xanchor="center", font=dict(size=16), xref="paper", yref="paper"))
+            marker=dict(colors=px.colors.qualitative.Pastel)), row=row, col=col)
+        annotations.append(dict(x=((col - 0.5) / n_cols), y=-0.2 - (row - 1) * 0.35,
+            text=f"<b style='font-size:16px'>Total: {int(sub_df['Tokens'].sum()):,}</b>", showarrow=False,
+            xanchor="center", font=dict(size=16), xref="paper", yref="paper"))
 
     fig_pies.update_layout(title_text=f"Monthly Token Distribution by Source (Total: {int(monthly_data['Tokens'].sum()):,})",
-        margin=dict(t=100, b=80), annotations=fig_pies.layout.annotations + tuple(annotations))
+        margin=dict(t=100, b=100), annotations=fig_pies.layout.annotations + tuple(annotations), height=500 * n_rows)
 
     return token_bar, token_line, wallet_bar, wallet_pie, referral_bar, referral_line, fee_line, token_source_bar, fig_pies
 
