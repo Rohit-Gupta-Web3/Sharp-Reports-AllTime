@@ -1,116 +1,86 @@
-# Sharp Token Dashboard - Render App Version (Structured like GitHub version)
+# Sharp Token Dashboard - Dash Version for Render.com
 
 import os
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from flask import Flask, render_template_string
+from dash import Dash, html, dcc
 
-app = Flask(__name__)
+app = Dash(__name__)
+server = app.server
 
-@app.route("/")
-def dashboard():
-    # Load Excel Data
-    df = pd.read_excel("Sharp Token.xlsx", sheet_name=None)
-    referral_df = df["Referrals"]
-    wallet_df = df["Wallets Created"]
-    fee_df = df["POL Data"]
-    tokens_df = df["Tokens per source"].copy()
+# Load Excel Data Once
+excel_data = pd.read_excel("Sharp Token.xlsx", sheet_name=None)
+referral_df = excel_data["Referrals"].copy()
+wallet_df = excel_data["Wallets Created"].copy()
+fee_df = excel_data["POL Data"].copy()
+tokens_df = excel_data["Tokens per source"].copy()
 
-    # Filter and Format Dates
-    tokens_df["Date"] = pd.to_datetime(tokens_df["Date"], errors="coerce")
-    tokens_df.dropna(subset=["Date"], inplace=True)
-    tokens_df = tokens_df[tokens_df["Date"] < "2025-07-01"].copy()
-    tokens_df["Date"] = tokens_df["Date"].dt.to_period("M").dt.to_timestamp()
+# Preprocess Data
 
-    for df_ in [wallet_df, referral_df, fee_df]:
-        df_["Date"] = pd.to_datetime(df_["Date"], errors="coerce")
-        df_.dropna(subset=["Date"], inplace=True)
-        df_.drop(df_.index[df_["Date"] >= "2025-07-01"], inplace=True)
-        df_["Month"] = df_["Date"].dt.to_period("M").dt.to_timestamp()
+tokens_df["Date"] = pd.to_datetime(tokens_df["Date"], errors="coerce")
+tokens_df.dropna(subset=["Date"], inplace=True)
+tokens_df = tokens_df[tokens_df["Date"] < "2025-07-01"].copy()
+tokens_df["Date"] = tokens_df["Date"].dt.to_period("M").dt.to_timestamp()
 
-    # Referrals
-    referral_sources = [col for col in referral_df.columns if col not in ["Date", "Month"] and pd.api.types.is_numeric_dtype(referral_df[col])]
-    referral_df["Referrals_Total"] = referral_df[referral_sources].sum(axis=1)
+token_sources = [col for col in tokens_df.columns if col not in ["Date", "Total"] and pd.api.types.is_numeric_dtype(tokens_df[col])]
+token_monthly = tokens_df.groupby("Date")[token_sources].sum().reset_index()
+token_monthly["Total"] = token_monthly[token_sources].sum(axis=1)
+token_monthly["Month"] = token_monthly["Date"].dt.strftime("%b %Y")
+total_tokens = int(token_monthly["Total"].sum())
 
-    # Token Distribution Over Time
-    token_sources = [col for col in tokens_df.columns if col not in ["Date", "Total"] and pd.api.types.is_numeric_dtype(tokens_df[col])]
-    token_monthly = tokens_df.groupby("Date")[token_sources].sum().reset_index()
-    token_monthly["Total"] = token_monthly[token_sources].sum(axis=1)
-    token_monthly["Month"] = token_monthly["Date"].dt.strftime("%b %Y")
-    total_tokens = int(token_monthly["Total"].sum())
+# Preprocess wallet data
+for df_ in [wallet_df, referral_df, fee_df]:
+    df_["Date"] = pd.to_datetime(df_["Date"], errors="coerce")
+    df_.dropna(subset=["Date"], inplace=True)
+    df_.drop(df_.index[df_["Date"] >= "2025-07-01"], inplace=True)
+    df_["Month"] = df_["Date"].dt.to_period("M").dt.to_timestamp()
 
-    fig1 = px.bar(token_monthly, x="Month", y="Total", text="Total", title=f"Monthly Token Distribution (Total: {total_tokens:,})", height=500)
-    fig1.update_traces(texttemplate="%{text:,.0f}", textposition="outside")
-    fig1.update_xaxes(type="category")
-    graph1 = fig1.to_html(full_html=False)
+# Referrals
+referral_sources = [col for col in referral_df.columns if col not in ["Date", "Month"] and pd.api.types.is_numeric_dtype(referral_df[col])]
+referral_df["Referrals_Total"] = referral_df[referral_sources].sum(axis=1)
+referral_monthly = referral_df.groupby("Month")[referral_sources + ["Referrals_Total"]].sum().reset_index()
+referral_monthly["MonthStr"] = referral_monthly["Month"].dt.strftime("%b %Y")
+melted_referrals = referral_monthly.melt(id_vars="MonthStr", value_vars=referral_sources, var_name="Campaign", value_name="Referrals_Count")
 
-    fig2 = px.line(token_monthly, x="Month", y="Total", markers=True, title=f"Token Growth Over Time (Total: {total_tokens:,})", height=500)
-    fig2.update_xaxes(type="category")
-    graph2 = fig2.to_html(full_html=False)
+# Wallets
+wallet_sources = [col for col in wallet_df.columns if col not in ["Date", "Month"] and pd.api.types.is_numeric_dtype(wallet_df[col])]
+wallet_monthly = wallet_df.groupby("Month")[wallet_sources].sum().reset_index()
+wallet_monthly["Total"] = wallet_monthly[wallet_sources].sum(axis=1)
+wallet_monthly["MonthStr"] = wallet_monthly["Month"].dt.strftime("%b %Y")
+platform_totals = wallet_monthly[wallet_sources].sum()
 
-    # Wallets Created
-    wallet_sources = [col for col in wallet_df.columns if col not in ["Date", "Month"] and pd.api.types.is_numeric_dtype(wallet_df[col])]
-    wallet_monthly = wallet_df.groupby("Month")[wallet_sources].sum().reset_index()
-    wallet_monthly["Total"] = wallet_monthly[wallet_sources].sum(axis=1)
-    wallet_monthly["MonthStr"] = wallet_monthly["Month"].dt.strftime("%b %Y")
-    platform_totals = wallet_monthly[wallet_sources].sum()
+# Fees
+monthly_fee = fee_df.groupby("Month")["TxnFee(POL)"].sum().reset_index()
+monthly_fee["MonthStr"] = monthly_fee["Month"].dt.strftime("%b %Y")
+total_fee = int(monthly_fee["TxnFee(POL)"].sum())
 
-    fig3 = px.bar(wallet_monthly, x="MonthStr", y="Total", text="Total", title=f"Monthly Wallets Created (Total: {wallet_monthly['Total'].sum():,.0f})", height=500)
-    fig3.update_traces(texttemplate="%{text:,.0f}", textposition="outside")
-    fig3.update_xaxes(type="category")
-    graph3 = fig3.to_html(full_html=False)
+# Token Source Totals
+token_source_totals = tokens_df[token_sources].sum().reset_index()
+token_source_totals.columns = ["Source", "Total Tokens"]
 
-    fig4 = px.pie(names=platform_totals.index, values=platform_totals.values, hole=0.4, title="Wallet Platform Distribution", height=500)
-    graph4 = fig4.to_html(full_html=False)
+# Charts
+fig1 = px.bar(token_monthly, x="Month", y="Total", text="Total", title=f"Monthly Token Distribution (Total: {total_tokens:,})", height=400)
+fig2 = px.line(token_monthly, x="Month", y="Total", markers=True, title="Token Growth Over Time", height=400)
+fig3 = px.bar(wallet_monthly, x="MonthStr", y="Total", text="Total", title="Monthly Wallets Created", height=400)
+fig4 = px.pie(names=platform_totals.index, values=platform_totals.values, hole=0.4, title="Wallet Platform Distribution", height=400)
+fig5 = px.bar(melted_referrals, x="MonthStr", y="Referrals_Count", color="Campaign", barmode="stack", title="Monthly Referrals by Source", height=400, color_discrete_sequence=px.colors.qualitative.Bold)
+fig6 = px.line(referral_monthly, x="MonthStr", y="Referrals_Total", markers=True, title="Total Monthly Referrals", height=400)
+fig7 = px.line(monthly_fee, x="MonthStr", y="TxnFee(POL)", markers=True, title=f"Monthly POL Fees (Total: {total_fee:,})", height=400)
+fig8 = px.bar(token_source_totals, x="Total Tokens", y="Source", orientation="h", title="Total Tokens by Source", height=400, color="Source", color_discrete_sequence=px.colors.qualitative.Vivid)
 
-    # Referrals by Source
-    referral_monthly = referral_df.groupby("Month")[referral_sources + ["Referrals_Total"]].sum().reset_index()
-    referral_monthly["MonthStr"] = referral_monthly["Month"].dt.strftime("%b %Y")
-    melted_referrals = referral_monthly.melt(id_vars="MonthStr", value_vars=referral_sources, var_name="Campaign", value_name="Referrals_Count")
+# Dash Layout
+app.layout = html.Div([
+    html.H1("Sharp Token Dashboard"),
+    dcc.Graph(figure=fig1),
+    dcc.Graph(figure=fig2),
+    dcc.Graph(figure=fig3),
+    dcc.Graph(figure=fig4),
+    dcc.Graph(figure=fig5),
+    dcc.Graph(figure=fig6),
+    dcc.Graph(figure=fig7),
+    dcc.Graph(figure=fig8),
+])
 
-    fig5 = px.bar(melted_referrals, x="MonthStr", y="Referrals_Count", color="Campaign", barmode="stack", title="Monthly Referrals by Source", height=500, color_discrete_sequence=px.colors.qualitative.Bold)
-    fig5.update_xaxes(type="category")
-    graph5 = fig5.to_html(full_html=False)
-
-    fig6 = px.line(referral_monthly, x="MonthStr", y="Referrals_Total", markers=True, title="Total Monthly Referrals", height=500)
-    fig6.update_xaxes(type="category")
-    graph6 = fig6.to_html(full_html=False)
-
-    # POL Fees
-    monthly_fee = fee_df.groupby("Month")["TxnFee(POL)"].sum().reset_index()
-    monthly_fee["MonthStr"] = monthly_fee["Month"].dt.strftime("%b %Y")
-    total_fee = int(monthly_fee["TxnFee(POL)"].sum())
-
-    fig7 = px.line(monthly_fee, x="MonthStr", y="TxnFee(POL)", markers=True, title=f"Monthly POL Fees (Total: {total_fee:,})", height=500)
-    fig7.update_xaxes(type="category")
-    graph7 = fig7.to_html(full_html=False)
-
-    # Total Tokens by Source
-    token_source_totals = tokens_df[token_sources].sum().reset_index()
-    token_source_totals.columns = ["Source", "Total Tokens"]
-    fig8 = px.bar(token_source_totals, x="Total Tokens", y="Source", orientation="h", title="Total Tokens by Source", height=500, color="Source", color_discrete_sequence=px.colors.qualitative.Vivid)
-    fig8.update_traces(texttemplate="%{x:,.0f}")
-    graph8 = fig8.to_html(full_html=False)
-
-    html = """
-    {% raw %}
-    <html><head><title>Sharp Token Dashboard</title></head><body>
-    {{ graph1 | safe }}<br><br>
-    {{ graph2 | safe }}<br><br>
-    {{ graph3 | safe }}<br><br>
-    {{ graph4 | safe }}<br><br>
-    {{ graph5 | safe }}<br><br>
-    {{ graph6 | safe }}<br><br>
-    {{ graph7 | safe }}<br><br>
-    {{ graph8 | safe }}<br><br>
-    </body></html>
-    {% endraw %}
-    """
-
-    return render_template_string(html, graph1=graph1, graph2=graph2, graph3=graph3,
-                                  graph4=graph4, graph5=graph5, graph6=graph6,
-                                  graph7=graph7, graph8=graph8)
-
-if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+if __name__ == "__main__":
+    app.run_server(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
