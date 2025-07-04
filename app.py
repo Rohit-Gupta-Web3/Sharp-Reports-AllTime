@@ -4,7 +4,6 @@ import plotly.express as px
 from dash import Dash, dcc, html
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 # --- Load data ---
 df = {k.strip(): v for k, v in pd.read_excel("Sharp Token.xlsx", sheet_name=None).items()}
@@ -110,8 +109,8 @@ def create_figures():
     row = []
     for i, m in enumerate(months):
         sub_df = monthly_data[monthly_data["Month"] == m]
-        fig = px.pie(sub_df, names="Source", values="Tokens", title=f"{m} Token Distribution by Source",
-                     hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
+        fig = px.pie(sub_df, names="Source", values="Tokens", hole=0.4)
+        fig.update_layout(showlegend=(i == 0), title=m)
         row.append(dbc.Col(dcc.Graph(figure=fig), width=2))
         if (i + 1) % 6 == 0:
             figs_pie.append(dbc.Row(row, className="mb-4"))
