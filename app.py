@@ -22,7 +22,7 @@ def dashboard():
     tokens_source_df["Date"] = pd.to_datetime(tokens_source_df["Date"], errors="coerce")
     tokens_source_df.dropna(subset=["Date"], inplace=True)
     tokens_source_df = tokens_source_df[tokens_source_df["Date"] < "2025-07-01"].copy()
-    tokens_source_df.loc[:, "Date"] = tokens_source_df.loc[:, "Date"].dt.to_period("M").dt.to_timestamp()
+    tokens_source_df["Date"] = tokens_source_df.loc[:, "Date"].dt.to_period("M").dt.to_timestamp()
 
     for df_ in [wallet_df, referral_df, fee_df]:
         if "Date" in df_.columns:
