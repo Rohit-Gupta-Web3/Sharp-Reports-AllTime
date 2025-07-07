@@ -10,6 +10,7 @@ import uuid
 
 # --- Timesheet helpers ---
 TASKS_FILE = "tasks.csv"
+LOGO = "/assets/logo.svg"
 
 def load_tasks():
     if os.path.exists(TASKS_FILE):
@@ -223,8 +224,31 @@ dashboard_layout = dbc.Container([
 ], fluid=False)
 
 # --- Dash App ---
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
+app = Dash(
+    __name__,
+    external_stylesheets=[dbc.themes.LUX],
+    meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
+)
 app.title = "Sharp Token Dashboard"
+
+# Navigation bar with logo
+navbar = dbc.Navbar(
+    dbc.Container(
+        [
+            dbc.Row(
+                [
+                    dbc.Col(html.Img(src=LOGO, height="40px")),
+                    dbc.Col(dbc.NavbarBrand("Sharp Token Dashboard", className="ms-2")),
+                ],
+                align="center",
+                className="g-0",
+            ),
+        ]
+    ),
+    color="primary",
+    dark=True,
+    className="mb-4",
+)
 
 def timesheet_layout():
     unique_names = sorted(tasks_df["name"].dropna().unique().tolist())
@@ -297,6 +321,7 @@ def timesheet_layout():
     ], fluid=False)
 
 app.layout = html.Div([
+    navbar,
     dcc.Tabs([
         dcc.Tab(label="Dashboard", children=dashboard_layout),
         dcc.Tab(label="Timesheet", children=timesheet_layout()),
