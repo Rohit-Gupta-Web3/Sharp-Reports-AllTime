@@ -14,7 +14,7 @@ wallet_df = df["Wallets Created"]
 fee_df = df["POL Data"]
 
 tokens_source_df = pd.read_excel("Sharp Token.xlsx", sheet_name="Tokens per source")
-tokens_source_df["Date"] = pd.to_datetime(tokens_source_df["Date"], format="%m-%d-%Y", errors="coerce")
+tokens_source_df["Date"] = pd.to_datetime(tokens_source_df["Date"], errors="coerce")
 tokens_source_df.dropna(subset=["Date"], inplace=True)
 tokens_source_df["Date"] = tokens_source_df["Date"].dt.date
 tokens_source_df["Date"] = pd.to_datetime(tokens_source_df["Date"])
@@ -22,7 +22,7 @@ tokens_source_df["Date"] = pd.to_datetime(tokens_source_df["Date"])
 # --- Clean and prep data ---
 for df_ in [wallet_df, referral_df, fee_df]:
     if "Date" in df_.columns:
-        df_["Date"] = pd.to_datetime(df_["Date"], format="%Y-%m-%d", errors="coerce")
+        df_["Date"] = pd.to_datetime(df_["Date"], errors="coerce")
         df_.dropna(subset=["Date"], inplace=True)
 
 referral_sources = [col for col in referral_df.columns if col != "Date" and pd.api.types.is_numeric_dtype(referral_df[col])]
