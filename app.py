@@ -8,48 +8,7 @@ from plotly.subplots import make_subplots
 from datetime import datetime, timedelta, date
 import uuid
 
-# --- Timesheet helpers ---
-TASKS_FILE = "tasks.csv"
 LOGO = "/assets/logo.svg"
-
-def load_tasks():
-    if os.path.exists(TASKS_FILE):
-        df = pd.read_csv(TASKS_FILE, parse_dates=["date", "created_at"])
-    else:
-        df = pd.DataFrame(
-            columns=[
-                "id",
-                "name",
-                "date",
-                "start",
-                "end",
-                "duration",
-                "description",
-                "completed",
-                "created_at",
-            ]
-        )
-    # ensure expected columns exist
-    for col in [
-        "id",
-        "name",
-        "date",
-        "start",
-        "end",
-        "duration",
-        "description",
-        "completed",
-        "created_at",
-    ]:
-        if col not in df.columns:
-            df[col] = None
-    if "completed" not in df.columns:
-        df["completed"] = True
-    return df
-
-
-def save_tasks(df):
-    df.to_csv(TASKS_FILE, index=False)
 
 # --- Load data ---
 df = {k.strip(): v for k, v in pd.read_excel("Sharp Token.xlsx", sheet_name=None).items()}
@@ -64,8 +23,6 @@ tokens_source_df.dropna(subset=["Date"], inplace=True)
 tokens_source_df["Date"] = tokens_source_df["Date"].dt.date
 tokens_source_df["Date"] = pd.to_datetime(tokens_source_df["Date"])
 
-# Load tasks data
-tasks_df = load_tasks()
 
 # --- Clean and prep data ---
 for df_ in [wallet_df, referral_df, fee_df]:
@@ -250,218 +207,14 @@ navbar = dbc.Navbar(
     className="mb-4",
 )
 
-def timesheet_layout():
-    unique_names = sorted(tasks_df["name"].dropna().unique().tolist())
-    name_options = [{"label": n, "value": n} for n in unique_names]
-    return dbc.Container([
-        html.H4("Timesheet", className="my-3"),
-        dbc.Row([
-            dbc.Col([
-                html.Label("Name"),
-                dcc.Input(id="ts-name", type="text", className="form-control"),
-            ], md=2),
-            dbc.Col([
-                html.Label("Date"),
-                dcc.DatePickerSingle(id="ts-date", date=date.today()),
-            ], md=2),
-            dbc.Col([
-                html.Label("Start Time"),
-                dcc.Input(id="ts-start", type="time", className="form-control"),
-            ], md=2),
-            dbc.Col([
-                html.Label("End Time"),
-                dcc.Input(id="ts-end", type="time", className="form-control"),
-            ], md=2),
-            dbc.Col([
-                html.Label("Duration (hh:mm)"),
-                dcc.Input(id="ts-duration", type="text", placeholder="0:30", className="form-control"),
-            ], md=2),
-            dbc.Col([
-                html.Label("Completed"),
-                dbc.Checkbox(id="ts-completed", value=True),
-            ], md=1),
-            dbc.Col([
-                html.Label("Description"),
-                dcc.Textarea(id="ts-desc", className="form-control"),
-            ], md=2),
-            dbc.Col([
-                html.Br(),
-                dbc.Button("Add Task", id="add-task", color="primary", className="mt-1"),
-            ], md=1),
-        ], className="mb-3"),
-        dbc.Row([
-            dbc.Col([
-                html.Label("Filter by Name"),
-                dcc.Dropdown(options=name_options, id="filter-name", placeholder="All"),
-            ], md=3),
-            dbc.Col([
-                html.Label("Filter by Day"),
-                dcc.DatePickerSingle(id="filter-day"),
-            ], md=3),
-        ], className="mb-3"),
-        dash_table.DataTable(
-            id="tasks-table",
-            columns=[
-                {"name": "ID", "id": "id", "hideable": True},
-                {"name": "Name", "id": "name"},
-                {"name": "Date", "id": "date"},
-                {"name": "Start", "id": "start"},
-                {"name": "End", "id": "end"},
-                {"name": "Duration", "id": "duration"},
-                {"name": "Description", "id": "description"},
-                {"name": "Completed", "id": "completed"},
-            ],
-            style_cell={"whiteSpace": "pre-line"},
-            row_selectable="single",
-            editable=True,
-        ),
-        dbc.Button("Save Changes", id="save-task", color="secondary", className="my-2"),
-        html.Div(id="summary", className="mt-3"),
-        dcc.Store(id="tasks-store", data=tasks_df.to_dict("records")),
-    ], fluid=False)
 
 app.layout = html.Div([
     navbar,
     dcc.Tabs([
         dcc.Tab(label="Dashboard", children=dashboard_layout),
-        dcc.Tab(label="Timesheet", children=timesheet_layout()),
     ])
 ])
 
-# --- Callbacks ---
-
-@app.callback(Output("ts-end", "value"), Input("ts-start", "value"))
-def update_end_time(start):
-    if start:
-        try:
-            t = datetime.strptime(start, "%H:%M") + timedelta(minutes=15)
-            return t.strftime("%H:%M")
-        except Exception:
-            pass
-    return None
-
-
-@app.callback(
-    Output("tasks-store", "data"),
-    Output("tasks-table", "data"),
-    Input("add-task", "n_clicks"),
-    State("ts-name", "value"),
-    State("ts-date", "date"),
-    State("ts-start", "value"),
-    State("ts-end", "value"),
-    State("ts-duration", "value"),
-    State("ts-completed", "value"),
-    State("ts-desc", "value"),
-    State("tasks-store", "data"),
-    prevent_initial_call=True,
-)
-def add_task(n, name, date_value, start, end, duration_inp, completed, desc, data):
-    records = data or []
-    if not (name and date_value):
-        return records, records
-
-    dur_td = None
-    if start:
-        if end:
-            start_dt = datetime.strptime(f"{date_value} {start}", "%Y-%m-%d %H:%M")
-            end_dt = datetime.strptime(f"{date_value} {end}", "%Y-%m-%d %H:%M")
-            dur_td = end_dt - start_dt
-        elif duration_inp:
-            try:
-                h, m = map(int, duration_inp.split(":"))
-                dur_td = timedelta(hours=h, minutes=m)
-                end_dt = datetime.strptime(start, "%H:%M") + dur_td
-                end = end_dt.strftime("%H:%M")
-            except Exception:
-                return records, records
-        else:
-            return records, records
-    elif duration_inp:
-        try:
-            h, m = map(int, duration_inp.split(":"))
-            dur_td = timedelta(hours=h, minutes=m)
-        except Exception:
-            return records, records
-    else:
-        return records, records
-
-    if dur_td is None:
-        return records, records
-
-    duration_str = f"{dur_td.seconds//3600}h {dur_td.seconds%3600//60}m"
-    record = {
-        "id": str(uuid.uuid4()),
-        "name": name,
-        "date": date_value,
-        "start": start,
-        "end": end,
-        "duration": duration_str,
-        "description": desc or "",
-        "completed": bool(completed),
-        "created_at": datetime.utcnow().isoformat(),
-    }
-    records.append(record)
-    pd.DataFrame(records).to_csv(TASKS_FILE, index=False)
-    return records, records
-
-
-@app.callback(
-    Output("tasks-table", "data"),
-    Input("tasks-store", "data"),
-    Input("filter-name", "value"),
-    Input("filter-day", "date"),
-)
-def filter_tasks(data, name, day):
-    df = pd.DataFrame(data)
-    if name:
-        df = df[df["name"] == name]
-    if day:
-        df = df[df["date"] == day]
-    return df.to_dict("records")
-
-
-@app.callback(Output("summary", "children"), Input("tasks-table", "data"))
-def update_summary(data):
-    if not data:
-        return ""
-    df = pd.DataFrame(data)
-    df["date"] = pd.to_datetime(df["date"])
-    df["duration_minutes"] = df["duration"].str.extract(r"(\d+)h (\d+)m").astype(int).mul([60, 1]).sum(axis=1)
-    summary_lines = []
-    for name, group in df.groupby("name"):
-        daily = group.groupby(group["date"].dt.date)["duration_minutes"].sum()
-        weekly_total = daily.sum()
-        for d, mins in daily.items():
-            status = "OK" if mins >= 480 else "<b>Less than 8h</b>"
-            summary_lines.append(f"{name} {d}: {mins/60:.1f}h {status}")
-        summary_lines.append(f"{name} weekly total: {weekly_total/60:.1f}h {'OK' if weekly_total >= 2400 else '<b>Less than 40h</b>'}")
-    return html.Ul([html.Li(html.Span(d, style={"whiteSpace": "pre"})) for d in summary_lines])
-
-
-@app.callback(
-    Output("tasks-store", "data"),
-    Output("tasks-table", "data"),
-    Input("save-task", "n_clicks"),
-    State("tasks-table", "data"),
-    State("tasks-table", "selected_rows"),
-    State("tasks-store", "data"),
-    prevent_initial_call=True,
-)
-def save_edit(n, table_data, selected, store_data):
-    if not selected:
-        return store_data, table_data
-    row = table_data[selected[0]]
-    df = pd.DataFrame(store_data)
-    idx = df.index[df["id"] == row["id"]]
-    if idx.empty:
-        return store_data, table_data
-    created_at = pd.to_datetime(df.loc[idx[0], "created_at"])
-    if datetime.utcnow() - created_at > timedelta(hours=24):
-        return store_data, table_data
-    df.loc[idx[0]] = row
-    df.to_csv(TASKS_FILE, index=False)
-    new_data = df.to_dict("records")
-    return new_data, new_data
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 80))
