@@ -32,6 +32,7 @@ tokens_source_df["Date"] = pd.to_datetime(tokens_source_df["Date"], errors="coer
 tokens_source_df.dropna(subset=["Date"], inplace=True)
 tokens_source_df["Date"] = tokens_source_df["Date"].dt.date
 tokens_source_df["Date"] = pd.to_datetime(tokens_source_df["Date"])
+
 # --- Clean and prep data ---
 for df_ in [wallet_df, referral_df, fee_df]:
     if "Date" in df_.columns:
