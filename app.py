@@ -167,18 +167,18 @@ token_bar, token_line, wallet_bar, wallet_pie, referral_bar, referral_line, fee_
 
 dashboard_layout = dbc.Container([
     html.H2("Sharp Token Dashboard", className="my-4 text-center"),
-    dbc.Row([dbc.Col(dcc.Graph(figure=token_bar), width=12)], className="mb-4"),
-    dbc.Row([dbc.Col(dcc.Graph(figure=token_line), width=12)], className="mb-4"),
-    dbc.Row([dbc.Col(dcc.Graph(figure=wallet_bar), width=12)], className="mb-4"),
+    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=token_bar))), width=12), className="mb-4"),
+    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=token_line))), width=12), className="mb-4"),
+    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=wallet_bar))), width=12), className="mb-4"),
     dbc.Row([
-        dbc.Col(dcc.Graph(figure=wallet_pie), md=6),
-        dbc.Col(dcc.Graph(figure=token_source_bar), md=6)
+        dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=wallet_pie))), md=6),
+        dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=token_source_bar))), md=6)
     ], className="mb-4"),
-    dbc.Row([dbc.Col(dcc.Graph(figure=referral_bar), width=12)], className="mb-4"),
-    dbc.Row([dbc.Col(dcc.Graph(figure=referral_line), width=12)], className="mb-4"),
-    dbc.Row([dbc.Col(dcc.Graph(figure=fee_line), width=12)], className="mb-4"),
-    dbc.Row([dbc.Col(dcc.Graph(figure=fig_pies), width=12)], className="mb-4"),
-], fluid=False)
+    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=referral_bar))), width=12), className="mb-4"),
+    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=referral_line))), width=12), className="mb-4"),
+    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=fee_line))), width=12), className="mb-4"),
+    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=fig_pies))), width=12), className="mb-4"),
+], fluid=True)
 
 # --- Dash App ---
 app = Dash(
@@ -210,9 +210,7 @@ navbar = dbc.Navbar(
 
 app.layout = html.Div([
     navbar,
-    dcc.Tabs([
-        dcc.Tab(label="Dashboard", children=dashboard_layout),
-    ])
+    dashboard_layout
 ])
 
 
