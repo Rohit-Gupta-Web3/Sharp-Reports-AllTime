@@ -10,6 +10,9 @@ import uuid
 
 LOGO = "/assets/logo.svg"
 
+GRAPH_STYLE = {"width": "100%", "height": "100%"}
+GRAPH_CONFIG = {"responsive": True}
+
 # --- Load data ---
 df = {k.strip(): v for k, v in pd.read_excel("Sharp Token.xlsx", sheet_name=None).items()}
 
@@ -167,17 +170,17 @@ token_bar, token_line, wallet_bar, wallet_pie, referral_bar, referral_line, fee_
 
 dashboard_layout = dbc.Container([
     html.H2("Sharp Token Dashboard", className="my-4 text-center"),
-    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=token_bar))), width=12), className="mb-4"),
-    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=token_line))), width=12), className="mb-4"),
-    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=wallet_bar))), width=12), className="mb-4"),
+    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=token_bar, style=GRAPH_STYLE, config=GRAPH_CONFIG))), width=12), className="mb-4"),
+    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=token_line, style=GRAPH_STYLE, config=GRAPH_CONFIG))), width=12), className="mb-4"),
+    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=wallet_bar, style=GRAPH_STYLE, config=GRAPH_CONFIG))), width=12), className="mb-4"),
     dbc.Row([
-        dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=wallet_pie))), md=6),
-        dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=token_source_bar))), md=6)
+        dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=wallet_pie, style=GRAPH_STYLE, config=GRAPH_CONFIG))), md=6),
+        dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=token_source_bar, style=GRAPH_STYLE, config=GRAPH_CONFIG))), md=6)
     ], className="mb-4"),
-    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=referral_bar))), width=12), className="mb-4"),
-    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=referral_line))), width=12), className="mb-4"),
-    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=fee_line))), width=12), className="mb-4"),
-    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=fig_pies))), width=12), className="mb-4"),
+    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=referral_bar, style=GRAPH_STYLE, config=GRAPH_CONFIG))), width=12), className="mb-4"),
+    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=referral_line, style=GRAPH_STYLE, config=GRAPH_CONFIG))), width=12), className="mb-4"),
+    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=fee_line, style=GRAPH_STYLE, config=GRAPH_CONFIG))), width=12), className="mb-4"),
+    dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=fig_pies, style=GRAPH_STYLE, config=GRAPH_CONFIG))), width=12), className="mb-4"),
 ], fluid=True)
 
 # --- Dash App ---
