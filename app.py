@@ -235,7 +235,6 @@ dashboard_layout = dbc.Container([
     dbc.Row(dbc.Col(dbc.Card(dbc.CardBody(dcc.Graph(figure=fig_pies, style=GRAPH_STYLE, config=GRAPH_CONFIG))), width=12), className="mb-4"),
 ], fluid=True)
 
-
 def timesheet_layout():
     unique_names = sorted(tasks_df["name"].dropna().unique().tolist())
     name_options = [{"label": n, "value": n} for n in unique_names]
@@ -306,6 +305,7 @@ def timesheet_layout():
         html.Div(id="summary", className="mt-3"),
         dcc.Store(id="tasks-store", data=tasks_df.to_dict("records")),
     ], fluid=True)
+
 
 # --- Dash App ---
 app = Dash(
