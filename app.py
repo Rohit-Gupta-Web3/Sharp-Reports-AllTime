@@ -33,9 +33,6 @@ tokens_source_df.dropna(subset=["Date"], inplace=True)
 tokens_source_df["Date"] = tokens_source_df["Date"].dt.date
 tokens_source_df["Date"] = pd.to_datetime(tokens_source_df["Date"])
 
-# Load tasks
-
-
 # --- Clean and prep data ---
 for df_ in [wallet_df, referral_df, fee_df]:
     if "Date" in df_.columns:
@@ -196,7 +193,10 @@ dashboard_layout = dbc.Container([
 app = Dash(
     __name__,
     external_stylesheets=[dbc.themes.LUX],
-    meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
+    meta_tags=[
+        {"name": "viewport", "content": "width=device-width, initial-scale=1"},
+        {"name": "screen-orientation", "content": "landscape"},
+    ],
 )
 app.title = "Sharp Economy"
 app.index_string = """<!DOCTYPE html>
@@ -205,6 +205,7 @@ app.index_string = """<!DOCTYPE html>
         {%metas%}
         <title>{%title%}</title>
         <link rel=\"icon\" type=\"image/svg+xml\" href=\"/assets/sharp_economy_icon.svg\"/>
+        <meta name=\"screen-orientation\" content=\"landscape\"/>
         {%css%}
     </head>
     <body>
