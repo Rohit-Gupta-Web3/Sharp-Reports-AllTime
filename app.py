@@ -248,7 +248,7 @@ def timesheet_layout():
             ], md=2),
             dbc.Col([
                 html.Label("Date"),
-                dcc.DatePickerSingle(id="ts-date", date=date.today()),
+                dcc.DatePickerSingle(id="ts-date", date=date.today(), style={"zIndex": 1100}),
             ], md=2),
             dbc.Col([
                 html.Label("Start"),
@@ -282,7 +282,7 @@ def timesheet_layout():
             ], md=3),
             dbc.Col([
                 html.Label("Filter by Day"),
-                dcc.DatePickerSingle(id="filter-day"),
+                dcc.DatePickerSingle(id="filter-day", style={"zIndex": 1100}),
             ], md=3),
         ], className="mb-3"),
         dash_table.DataTable(
@@ -305,7 +305,6 @@ def timesheet_layout():
         html.Div(id="summary", className="mt-3"),
         dcc.Store(id="tasks-store", data=tasks_df.to_dict("records")),
     ], fluid=True)
-
 
 # --- Dash App ---
 app = Dash(

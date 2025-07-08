@@ -16,3 +16,8 @@ body {
     padding: 0.5rem;
   }
 }
+
+/* ensure date pickers appear above other elements */
+.DateInput {
+  z-index: 1100 !important;
+}
